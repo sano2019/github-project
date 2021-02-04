@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block content %}
+
+<h1 class="text-center">Welcome to the Search Page</h1>
+  {{wtf.quick_form(form, button_map={"submit":"primary w-50"})}}
+<div class="user-search">
+
+
+{% for user in users %}
+<div class="card text-center" style="width: 18rem;">
+  <img src="{{user.avatar_url}}" class="card-img-top" alt="...">
+  <div class="card-body">
+    <h5 class="card-title">{{user.login}}</h5>
+    <a href="{{url_for('details', username=user.login)}}" class="btn btn-primary">More Information</a>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+{% endblock %}

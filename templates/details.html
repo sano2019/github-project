@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1 class="text-center">Title: {{user['login']}}</h1>
+<p>Location: {{user.location}}</p>
+
+
+{% if repos %}
+{% for repo in repos[:5] %}
+<p><a href="https://github.com/{{repo.full_name}}">{{repo.name}}</a></p>
+{% endfor %}
+{% endif %}
+{% if languages %}
+    {% for k, v in languages.items() %}
+        <p>{{k}} - {{v}}</p>
+    {% endfor %}
+{% endif %}
+{% endblock %}

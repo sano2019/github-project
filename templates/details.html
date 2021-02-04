@@ -2,8 +2,8 @@
 
 {% block content %}
 
-<h1 class="text-center">Title: {{user['login']}}</h1>
-<p>Location: {{user.location}}</p>
+<h1 class="text-center">{{user.login}}</h1>
+<p>Location: {{user.location}} - For Hire: {% if user.hireable %} ✅  {% else %} ❌ {% endif %}</p>
 
 
 {% if repos %}

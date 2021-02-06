@@ -41,3 +41,28 @@
 ul {
   list-style-type: none;
 }
+
+
+.contact-card {
+    background-color: rgba(0,255,255,.1);
+    border: solid 1px black;
+    word-wrap: break-word;
+    border-radius: 5px;
+    box-shadow: 5px 6px 6px 2px #e9ecef
+}
+
+.username {
+    position: relative;
+    bottom: 8px;
+    color: grey
+}
+
+.head {
+    color: #97989a;
+    font-size: 12px
+}
+
+.bottom {
+    color: grey;
+    font-size: 14px
+}

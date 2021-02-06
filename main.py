@@ -1,12 +1,11 @@
 import requests
 import os
 import datetime
+import json
 from collections import Counter
 from flask import Flask, render_template, request, url_for, redirect, flash
 from flask_bootstrap import Bootstrap
-from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, PasswordField
-from wtforms.validators import DataRequired, Length, Email, EqualTo
+from forms import UpdateSavedUser, RegisterUserForm,SearchUserForm,LoginUserForm
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -51,38 +50,11 @@ class SavedProfiles(db.Model):
     location = db.Column(db.String)
     email = db.Column(db.String)
     company = db.Column(db.String)
+    languages = db.Column(db.String)
+    total_language = db.Column(db.Integer)
+    repositories = db.Column(db.String)
 
 #db.create_all()
-
-
-class UpdateSavedUser(FlaskForm):
-    name = StringField()
-    twitter_username = StringField()
-    location = StringField()
-    email = StringField()
-    company = StringField()
-    submit = SubmitField("Update")
-
-class SearchUserForm(FlaskForm):
-    username = StringField(validators=[DataRequired()], render_kw={"placeholder": "Github Username"})
-    submit = SubmitField("Search")
-
-
-class RegisterUserForm(FlaskForm):
-    email = StringField(validators=[DataRequired(),
-                                    Email()])
-    password = PasswordField(validators=[DataRequired(),
-                                         Length(min=6, message="Password must be at least 6 characters"),
-                                         EqualTo('confirm_password', message="Passwords must match")])
-    confirm_password = PasswordField()
-    submit = SubmitField("Register")
-
-
-class LoginUserForm(FlaskForm):
-    email = StringField(validators=[DataRequired(),
-                                    Email()])
-    password = PasswordField()
-    submit = SubmitField("Log In")
 
 
 @app.route("/")
@@ -159,8 +131,13 @@ def details(username):
             languages = Counter(repo_language)
         else:
             languages += Counter(repo_language)
-    #chart = create_chart(languages)
     total_language = sum(languages.values())
+    saved_user = SavedProfiles.query.filter_by(html_url=user['html_url']).first()
+    if saved_user:
+        saved_user.languages = json.dumps(languages)
+        saved_user.repositories = json.dumps(repositories)
+        saved_user.total_language = total_language
+        db.session.commit()
     return render_template('details.html', user=user, repos=repositories, languages=languages,
                            total=total_language, logged_in=current_user.is_authenticated)
 
@@ -169,27 +146,36 @@ def details(username):
 @login_required
 def saved_users():
     users = SavedProfiles.query.all()
-    return render_template('saved_users.html', logged_in=current_user.is_authenticated, users=users)
-
+    for user in users:
+        user.languages = json.loads(user.languages)
+        total_language = sum(user.languages.values())
+        user.repositories = json.loads(user.repositories)
+    return render_template('saved_users.html', logged_in=current_user.is_authenticated, users=users, total=total_language)
 
 
 @app.route("/save_user/<username>", methods=["GET"])
 def save_user(username):
     user = fetch_user(username)
-    new_user = SavedProfiles(
-        login=user['login'],
-        html_url=user['html_url'],
-        avatar_url=user['avatar_url'],
-        name=user['name'],
-        hireable=user['hireable'],
-        twitter_username=user['twitter_username'],
-        location=user['location'],
-        email=user['email'],
-        company=user['company'],
-    )
-    db.session.add(new_user)
-    db.session.commit()
-    return redirect(url_for('saved_users'))
+    if not SavedProfiles.query.filter_by(html_url=user['html_url']).first():
+        new_user = SavedProfiles(
+            login=user['login'],
+            html_url=user['html_url'],
+            avatar_url=user['avatar_url'],
+            name=user['name'],
+            hireable=user['hireable'],
+            twitter_username=user['twitter_username'],
+            location=user['location'],
+            email=user['email'],
+            company=user['company'],
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        if new_user:
+            flash("User saved successfully")
+        return redirect(url_for('details', username=user['login']))
+    else:
+        flash("User already exists")
+        return redirect(url_for('details', username=user['login']))
 
 
 @app.route("/update_saved_user/<user_id>", methods=["GET", "POST"])

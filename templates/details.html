@@ -1,25 +1,73 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1 class="text-center">{{user.login}}</h1>
-<p>Location: {{user.location}} - For Hire: {% if user.hireable %} ✅  {% else %} ❌ {% endif %}</p>
-
-
-{% if repos %}
-{% for repo in repos[:5] %}
-<p><a href="https://github.com/{{repo.full_name}}">{{repo.name}}</a></p>
-{% endfor %}
-{% endif %}
-
-<h3>Within the above repositories the following languages were used:</h3>
-{% if languages %}
-    {% for k, v in languages|dictsort(by='value', reverse=True) %}
-        <p>{{k}} - {{(v / total * 100)|round()}}%</p>
-    {% endfor %}
-{% endif %}
-
-{% if logged_in %}
-    <a href="{{url_for('save_user', username=user.login)}}" class="btn btn-primary">Save User</a>
-{% endif %}
+<div class="container mt-5">
+    <div class="row d-flex justify-content-center">
+        <div class="col-md-7">
+            <div class="contact-card p-2 text-center">
+                <div class="row">
+                    <div class="col-md-7 border-right no-gutters">
+                        <div class="py-3"><img src="{{user.avatar_url}}" width="100" class="rounded-circle">
+                            <h4 class="text-secondary">{{user.name}}</h4>
+                            <div class="username"><span>username: {{user.login}}</span></div>
+                            <div class="stats">
+                                <table class="table table-borderless">
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex flex-column"> <span class="text-left head">Hireable</span> <span class="text-left bottom">{% if user.hireable %} ✅  {% else %} ❌ {% endif %}</span> </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column"> <span class="text-left head">Location</span> <span class="text-left bottom">{{user.location}}</span> </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex flex-column"> <span class="text-left head">Email</span> <span class="text-left bottom">{{user.email}}</span> </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column"> <span class="text-left head">Company</span> <span class="text-left bottom">{{user.company}}</span> </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% if logged_in %}
+                                <a href="{{url_for('save_user', username=user.login)}}" class="btn btn-primary">Save User</a>
+                                {% with messages = get_flashed_messages() %}
+                                    {% if messages %}
+                                        {% for message in messages %}
+                                            <p>{{message}}</p>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="py-3">
+                            {% if repos %}
+                                <div> <span class="d-block head font-weight-bold">{{user.name}}'s last 5 repositories:</span> </div>
+                                <ul class="list-group pb-5">
+                                {% for repo in repos %}
+                                    <li class="list-item"><a href="https://github.com/{{repo.full_name}}">{{repo.name}}</a></li>
+                                {% endfor %}
+                                </ul>
+                            {% endif %}
+                            {% if languages %}
+                                <div> <span class="d-block head font-weight-bold pb-2 pt-2">Languages used in above repositories:</span> </div>
+                                <ul class="list-group">
+                                {% for k, v in languages|dictsort(by='value', reverse=True) %}
+                                    <li class="list-item">{{k}} - {{(v / total * 100)|round()}}%</li>
+                                {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

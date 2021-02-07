@@ -1,34 +1,24 @@
-import requests
-import os
 import datetime
 import json
-from collections import Counter
 from flask import Flask, render_template, request, url_for, redirect, flash
 from flask_bootstrap import Bootstrap
-from forms import UpdateSavedUser, RegisterUserForm,SearchUserForm,LoginUserForm
+from forms import UpdateSavedUser, RegisterUserForm, SearchUserForm, LoginUserForm
+from github_api_operations import fetch_repositories, fetch_users, fetch_user, fetch_user_languages
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
-
-TOKEN = os.getenv('GITHUB_TOKEN')
+from os import getenv, path
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SECRET_KEY'] = getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 db = SQLAlchemy(app)
 Bootstrap(app)
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-
-@login_manager.unauthorized_handler
-def unauthorized_callback():
-    return redirect('/login')
 
 
 # User class for registered users
@@ -54,7 +44,19 @@ class SavedProfiles(db.Model):
     total_language = db.Column(db.Integer)
     repositories = db.Column(db.String)
 
-#db.create_all()
+
+if not path.exists('./users.db'):
+    db.create_all()
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+@login_manager.unauthorized_handler
+def unauthorized_callback():
+    return redirect('/login')
 
 
 @app.route("/")
@@ -72,7 +74,8 @@ def register():
         )
         db.session.add(new_user)
         db.session.commit()
-        return redirect(url_for('home'))
+        login_user(new_user)
+        return redirect(url_for('search'))
     return render_template('register.html', form=form, logged_in=current_user.is_authenticated)
 
 
@@ -100,23 +103,14 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
+
 @app.route("/search", methods=["GET", "POST"])
 def search():
     form = SearchUserForm()
     if request.method == "POST":
-        users_endpoint = "https://api.github.com/search/users"
         username = request.form.get('username')
-        headers = {
-            "Authorization": f"token {TOKEN}",
-            "accept": "application/vnd.github.v3+json",
-        }
-        params = {
-            "q": username
-        }
-        response = requests.get(users_endpoint, params=params, headers=headers)
-        data = response.json()
-        users = data['items']
-        return render_template("search.html", users=users, form=form)
+        users = fetch_users(username)
+        return render_template("search.html", users=users, form=form, logged_in=current_user.is_authenticated)
     return render_template("search.html", form=form, logged_in=current_user.is_authenticated)
 
 
@@ -124,38 +118,35 @@ def search():
 def details(username):
     user = fetch_user(username)
     repositories = fetch_repositories(username)
-    languages = {}
-    for repo in repositories[:5]:
-        repo_language = check_repo_languages(username, repo['name'])
-        if len(languages) == 0:
-            languages = Counter(repo_language)
-        else:
-            languages += Counter(repo_language)
+    saved = False
+    languages = fetch_user_languages(user, repositories)
     total_language = sum(languages.values())
     saved_user = SavedProfiles.query.filter_by(html_url=user['html_url']).first()
     if saved_user:
-        saved_user.languages = json.dumps(languages)
-        saved_user.repositories = json.dumps(repositories)
-        saved_user.total_language = total_language
-        db.session.commit()
+        saved = True
     return render_template('details.html', user=user, repos=repositories, languages=languages,
-                           total=total_language, logged_in=current_user.is_authenticated)
+                           total=total_language, logged_in=current_user.is_authenticated, saved=saved)
 
 
 @app.route("/saved_users", methods=["GET", "POST"])
 @login_required
 def saved_users():
     users = SavedProfiles.query.all()
-    for user in users:
-        user.languages = json.loads(user.languages)
-        total_language = sum(user.languages.values())
-        user.repositories = json.loads(user.repositories)
-    return render_template('saved_users.html', logged_in=current_user.is_authenticated, users=users, total=total_language)
+    if users:
+        for user in users:
+            user.languages = json.loads(user.languages)
+            user.repositories = json.loads(user.repositories)
+    return render_template('saved_users.html', logged_in=current_user.is_authenticated, users=users)
 
 
 @app.route("/save_user/<username>", methods=["GET"])
 def save_user(username):
     user = fetch_user(username)
+    user_repositories = fetch_repositories(user['login'])
+    repositories = json.dumps(user_repositories)
+    user_languages = fetch_user_languages(username=user, repositories=user_repositories)
+    languages = json.dumps(user_languages)
+    total_language = sum(user_languages.values())
     if not SavedProfiles.query.filter_by(html_url=user['html_url']).first():
         new_user = SavedProfiles(
             login=user['login'],
@@ -167,15 +158,13 @@ def save_user(username):
             location=user['location'],
             email=user['email'],
             company=user['company'],
+            repositories=repositories,
+            languages=languages,
+            total_language=total_language,
         )
         db.session.add(new_user)
         db.session.commit()
-        if new_user:
-            flash("User saved successfully")
-        return redirect(url_for('details', username=user['login']))
-    else:
-        flash("User already exists")
-        return redirect(url_for('details', username=user['login']))
+        return redirect(url_for('saved_users', logged_in=current_user.is_authenticated))
 
 
 @app.route("/update_saved_user/<user_id>", methods=["GET", "POST"])
@@ -208,54 +197,15 @@ def delete_user(user_id):
     return redirect(url_for('saved_users'))
 
 
-
 """
 A function that will keep the current year in the footer up to date
 """
+
+
 @app.context_processor
 def current_year():
     now = datetime.datetime.now()
     return {'year': now.year}
-
-
-"""
-A function to retrieve the user's repositories
-"""
-def fetch_repositories(username):
-    repository_endpoint = f"https://api.github.com/users/{username}/repos"
-    params = {
-        "username": username,
-        "type": "owner",
-        "sort": "updated",
-        "per_page": "5",
-    }
-    headers = {
-        "Authorization": f"token {TOKEN}",
-        "accept": "application/vnd.github.v3+json",
-    }
-    response = requests.get(repository_endpoint, params=params, headers=headers)
-    repositories = response.json()
-    return repositories
-
-def fetch_user(username):
-    user_endpoint = "https://api.github.com/users"
-    headers = {
-        "Authorization": f"token {TOKEN}",
-        "accept": "application/vnd.github.v3+json",
-    }
-    response = requests.get(f"{user_endpoint}/{username}", headers=headers)
-    user = response.json()
-    return user
-
-def check_repo_languages(owner, repo):
-    repo_language_endpoint = "http://api.github.com/repos"
-    headers = {
-        "Authorization": f"token {TOKEN}",
-        "accept": "application/vnd.github.v3+json",
-    }
-    response = requests.get(f"{repo_language_endpoint}/{owner}/{repo}/languages", headers=headers)
-    languages = response.json()
-    return languages
 
 
 if __name__ == "__main__":

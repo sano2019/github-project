@@ -2,6 +2,12 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, Length, Email, EqualTo
 
+"""
+The forms are generated with wtforms, and rendered into HTML with shorthand through flask bootstrap.
+documentation: https://wtforms.readthedocs.io/en/2.3.x/
+"""
+
+
 class UpdateSavedUser(FlaskForm):
     name = StringField()
     twitter_username = StringField()
@@ -9,6 +15,7 @@ class UpdateSavedUser(FlaskForm):
     email = StringField()
     company = StringField()
     submit = SubmitField("Update")
+
 
 class SearchUserForm(FlaskForm):
     username = StringField(validators=[DataRequired()], render_kw={"placeholder": "Github Username"})

@@ -33,7 +33,9 @@
                                 </table>
                             </div>
                             {% if logged_in %}
+                            {% if not saved %}
                                 <a href="{{url_for('save_user', username=user.login)}}" class="btn btn-primary">Save User</a>
+                            {% endif %}
                                 {% with messages = get_flashed_messages() %}
                                     {% if messages %}
                                         {% for message in messages %}

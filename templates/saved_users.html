@@ -50,7 +50,7 @@
                                 <div> <span class="d-block head font-weight-bold">{{user.name}}'s last 5 repositories:</span> </div>
                                 <ul class="list-group pb-5">
                                 {% for repo in user.repositories %}
-                                    <li class="list-item"><a href="https://github.com/{{repo.full_name}}">{{repo.name}}</a></li>
+                                    <li class="list-item"><a href="https://github.com/{{repo.full_name}}" target="_blank" >{{repo.name}}</a></li>
                                 {% endfor %}
                                 </ul>
                             {% endif %}

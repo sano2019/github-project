@@ -45,6 +45,7 @@ class SavedProfiles(db.Model):
     repositories = db.Column(db.String)
 
 
+# if the database does not exist yet, it is created
 if not path.exists('./users.db'):
     db.create_all()
 
@@ -140,6 +141,7 @@ def saved_users():
 
 
 @app.route("/save_user/<username>", methods=["GET"])
+@login_required
 def save_user(username):
     user = fetch_user(username)
     user_repositories = fetch_repositories(user['login'])
@@ -190,6 +192,7 @@ def update_saved_user(user_id):
 
 
 @app.route("/delete_user/<int:user_id>")
+@login_required
 def delete_user(user_id):
     user = SavedProfiles.query.get(user_id)
     db.session.delete(user)

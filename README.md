@@ -3,9 +3,9 @@
 ## What the app does:
 This app is aimed at IT recruiters within an organization.
 
-It's main feature is the ability to quickly retrieve the recently used programming languages from a potential candidate.
+The main feature is the ability to quickly retrieve the recently used programming languages from a potential candidate.
 
-In addition, if the user is registered and signed in, the application allows the user to save the profiles of potentially interesting candidates to a database for future reference.
+In addition, if the recruiter is registered and signed in, the application allows the recruiter to save the Github profiles of potentially interesting candidates to a database for future reference.
 
 Searching for a user retrieves their general information as well as the last 5 updated respositories the person owns. Following this the languages used in the repositories are displayed as percentages of the code in the repositories which allows the recruiter to quickly get an estimation of what languages the person uses.
 

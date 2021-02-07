@@ -1,6 +1,6 @@
 # Github Staff Finder App
 
-##What the app does:
+## What the app does:
 This app is aimed at IT recruiters within an organization. It allows them to search for people on Github and if they are registered save them to a database for later referral. They have the option to update information that might be missing on Github.
 
 Searching for a user retrieves their general information as well as the last 5 updated respositories the person owns. Following this the languages used in the repositories are displayed as percentages of the code in the repositories which allows the recruiter to quickly get an estimation of what languages the person uses.
